@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Вход в систему{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white text-center py-3">
+                <h4 class="card-title mb-0">🔑 Вход в панель</h4>
+            </div>
+            <div class="card-body p-4">
+                {% if error %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                
+                <form action="/login" method="post">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Логин</label>
+                        <input type="text" class="form-control" id="username" name="username" required autocomplete="username">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Пароль</label>
+                        <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
+                    </div>
+                    <div class="mb-4">
+                        <label for="code_2fa" class="form-label">Код безопасности 2FA</label>
+                        <input type="text" class="form-control text-center fs-4 fw-bold" id="code_2fa" name="code_2fa" placeholder="000000" maxlength="6" required>
+                        <div class="form-text text-center mt-2">6 цифр из приложения Google Authenticator</div>
+                    </div>
+                    <button type="submit" class="btn btn-dark w-100 py-2">Войти</button>
+                </form>
+            </div>
+            <div class="card-footer text-center bg-light py-3">
+                <span class="text-muted">Ещё нет аккаунта?</span> <a href="/register" class="text-decoration-none fw-bold">Регистрация</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

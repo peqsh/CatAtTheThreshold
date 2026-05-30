@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Регистрация в системе{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4 mb-5">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white py-3">
+                <h4 class="card-title mb-0">📝 Регистрация нового аккаунта</h4>
+            </div>
+            <div class="card-body p-4">
+                
+                {% if error %}
+                    <div class="alert alert-danger mb-4">{{ error }}</div>
+                {% endif %}
+                
+                <form action="/register" method="post">
+                    <h5 class="text-primary mb-3">Шаг 1: Учетные данные</h5>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Имя пользователя (Логин)</label>
+                        <input type="text" class="form-control" id="username" name="username" required autocomplete="username">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Пароль</label>
+                        <input type="password" class="form-control" id="password" name="password" required autocomplete="new-password">
+                    </div>
+                    <div class="mb-4">
+                        <label for="telegram_id" class="form-label">Telegram ID (опционально, для уведомлений от бота)</label>
+                        <input type="number" class="form-control" id="telegram_id" name="telegram_id" placeholder="Например: 12345678">
+                        <div class="form-text">Свой ID можно узнать у бота @userinfobot или @CheckIDBot в Telegram.</div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="text-primary mb-2">Шаг 2: Защита аккаунта (2FA)</h5>
+                    <p class="small text-muted mb-3">
+                        1. Откройте приложение <strong>Google Authenticator</strong>, Яндекс Ключ или Authy на телефоне.<br>
+                        2. Нажмите кнопку добавления аккаунта и <strong>отсканируйте этот QR-код</strong>:
+                    </p>
+                    
+                    <div class="text-center mb-4 p-3 border bg-light rounded">
+                        <img src="data:image/png;base64,{{ qr_code }}" alt="2FA QR Code" class="img-fluid shadow-sm border p-2 bg-white mb-2" style="max-width: 200px;">
+                        <div class="mt-2">
+                            <span class="text-muted small">Если сканер не работает, введите ключ вручную:</span>
+                            <br>
+                            <code class="text-dark bg-white px-2 py-1 border rounded fw-bold fs-6">{{ secret }}</code>
+                        </div>
+                        <input type="hidden" name="otp_secret" value="{{ secret }}">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="2fa_code" class="form-label fw-bold">Шаг 3: Введите 6-значный код из приложения для подтверждения</label>
+                        <input type="text" class="form-control text-center fs-4 fw-bold text-primary" id="2fa_code" name="2fa_code" placeholder="000000" maxlength="6" required autocomplete="off">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fs-5">Зарегистрироваться</button>
+                </form>
+            </div>
+            <div class="card-footer text-center bg-light py-3">
+                <span class="text-muted">Уже есть аккаунт?</span> <a href="/login" class="text-decoration-none fw-bold">Войти</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

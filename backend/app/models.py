@@ -9,18 +9,22 @@ from app.database import Base
 
 class User(Base):
     __tablename__ = "users"
-    
-    id: Mapped[int] = mapped_column(primary_key=True)
 
-    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=True)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    telegram_id: Mapped[Optional[int]] = mapped_column(BigInteger, unique=True, nullable=True, index=True)
     
-    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Поля для веб-интерфейса
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(20), default="user") # "user" или "admin"
     
-
-    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
-    otp_secret: Mapped[Optional[str]] = mapped_column(String(32))
+    # Двухфакторная аутентификация (2FA)
+    otp_secret: Mapped[str] = mapped_column(String(32)) 
+    is_2fa_enabled: Mapped[bool] = mapped_column(Boolean, default=False) # Исправлено здесь!
+    
+    # Управление уведомлениями
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True) 
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
 class Detection(Base):
     __tablename__ = "detections"

@@ -50,7 +50,7 @@ async def command_start_handler(message: types.Message):
 async def send_cat_notification(photo_path: str, confidence: float):
     db: Session = SessionLocal()
     try:
-        active_users = db.query(User).filter(User.is_active == True).all()
+        active_users = db.query(User).filter(User.is_active == True, User.telegram_id.isnot(None)).all()
         
         if not active_users:
             logging.info("No active users to notify.")
@@ -60,9 +60,14 @@ async def send_cat_notification(photo_path: str, confidence: float):
         caption = f"?? Cat detected!\nConfidence: {confidence:.2%}"
 
         for user in active_users:
+            # ПОДСТРАХОВКА: Проверяем, что ID физически существует перед отправкой
+            if not user.telegram_id:
+                logging.warning(f"Skipping user {user.id} because telegram_id is None")
+                continue
+                
             try:
                 await bot.send_photo(
-                    chat_id=user.telegram_id,
+                    chat_id=int(user.telegram_id), # Явно приводим к числу
                     photo=photo,
                     caption=caption
                 )

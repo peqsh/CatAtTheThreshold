@@ -3,17 +3,17 @@ import time
 import logging
 import os
 import asyncio
+import requests
 from ultralytics import YOLO
 from datetime import datetime
 
 # Absolute imports
-from app.telegram import send_cat_notification
 from app.database import SessionLocal
-from app.models import Detection
+from app.models import Detection, User  # Импорт моделей базы данных
 
 # CONFIGURATION
 CONFIDENCE_THRESHOLD = 0.2  # Detection sensitivity (0.0 to 1.0)
-CHECK_INTERVAL = 5          # Time delay between checks in seconds
+CHECK_INTERVAL = 1          # Time delay between checks in seconds
 SAVE_PATH = "static/captures" # Directory to store detection images
 CAT_CLASS_ID = 15           # COCO dataset class ID for 'cat'
 
@@ -44,7 +44,6 @@ def run_detector():
                 break
 
             # Run YOLO inference on the current frame
-            # verbose=False reduces console clutter
             results = model(frame, verbose=False)
             
             cat_detected = False
@@ -72,25 +71,60 @@ def run_detector():
                 cv2.imwrite(file_path, frame)
                 logging.info(f"Cat detected! Confidence: {max_conf:.2f}. Image saved: {file_path}")
 
-                # Save detection metadata to PostgreSQL
+                # ========================================================
+                # 1. СОХРАНЕНИЕ МЕТАДАННЫХ В POSTGRESQL (ВОЗВРАЩЕНО И ИСПРАВЛЕНО)
+                # ========================================================
                 db = SessionLocal()
                 try:
                     new_detection = Detection(
-                        photo_url=file_path,
+                        photo_url=file_path,       # Исправлено под твою модель
                         confidence_score=max_conf
                     )
                     db.add(new_detection)
                     db.commit()
-                except Exception as e:
-                    logging.error(f"Database error: {e}")
+                    logging.info("Successfully saved detection log to PostgreSQL database!")
+                except Exception as db_err:
+                    logging.error(f"Database error while saving detection: {db_err}")
                 finally:
                     db.close()
 
-                # Trigger Telegram notification
+                # ========================================================
+                # 2. НАДЕЖНЫЙ СИНХРОННЫЙ БЛОК ОТПРАВКИ TELEGRAM
+                # ========================================================
+                db = SessionLocal()
                 try:
-                    asyncio.run(send_cat_notification(file_path, max_conf))
-                except Exception as e:
-                    logging.error(f"Notification error: {e}")
+                    import dotenv
+                    dotenv.load_dotenv()
+                    TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+                    
+                    if TELEGRAM_TOKEN:
+                        # Находим всех активных пользователей с заполненным ID
+                        active_users = db.query(User).filter(User.is_active == True, User.telegram_id.isnot(None)).all()
+                        
+                        caption = f"🐱 Cat detected!\nConfidence: {max_conf:.2%}"
+                        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto"
+                        
+                        for user in active_users:
+                            try:
+                                logging.info(f"Sending via HTTP API to: {user.telegram_id}")
+                                with open(file_path, 'rb') as photo_file:
+                                    payload = {'chat_id': int(user.telegram_id), 'caption': caption}
+                                    files = {'photo': photo_file}
+                                    response = requests.post(url, data=payload, files=files)
+                                    
+                                    if response.status_code == 200:
+                                        logging.info(f"Telegram notification sent to user {user.telegram_id} successfully.")
+                                    else:
+                                        logging.error(f"Telegram API Error: {response.text}")
+                            except Exception as user_err:
+                                logging.error(f"Failed to send to {user.telegram_id}: {user_err}")
+                    else:
+                        logging.error("TELEGRAM_TOKEN not found in environment!")
+                except Exception as tg_err:
+                    logging.error(f"Notification error: {tg_err}")
+                finally:
+                    db.close()
+                # ========================================================
 
             # Sleep to reduce CPU/GPU load
             time.sleep(CHECK_INTERVAL)
